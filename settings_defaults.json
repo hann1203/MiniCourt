@@ -1,0 +1,26 @@
+{
+    "theme": "light",
+    "global_font_size": "medium",
+    "editor_font": "Consolas",
+    "editor_font_size": 12,
+    "viewer_font_size": 11,
+    "autosave_interval": 60,
+    "confirm_before_delete": true,
+    "auto_select_first_item": true,
+    "show_splash_screen": true,
+    "startup_view": "main_menu",
+    "hotkeys": {
+        "new_resource": "Control-n",
+        "search": "Control-f",
+        "delete": "Delete",
+        "new_journal_entry": "Control-Shift-J"
+    },
+    "export_folder": "",
+    "filename_pattern": "{date}_{title}",
+    "backup_frequency": "weekly",
+    "include_timestamps": true,
+    "window_title": "Courtroom Workspace",
+    "app_version": "1.0.0",
+    "icon_path": "",
+    "dpi_scale": 1.4
+}
