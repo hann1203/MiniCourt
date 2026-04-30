@@ -1,5 +1,4 @@
 # MiniCourt ⚖️
-courtroom process workspace and data center, i&lt;3 due process
 *A courtroom workflow companion for navigators, deputies, and legal staff.*
 
 MiniCourt is a desktop application designed to streamline courtroom workflow, improve hearing documentation, and support legal professionals with a clean, modern, courtroom‑inspired interface.  
