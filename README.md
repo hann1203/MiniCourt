@@ -6,7 +6,7 @@ Built with Python and Tkinter, MiniCourt brings together docket management, even
 
 ---
 
-## ⚖️ Features
+## Features
 
 - **Courtroom Event Logger**  
   Log hearing events in real time with structured categories, timestamps, and notes.
@@ -31,7 +31,7 @@ Built with Python and Tkinter, MiniCourt brings together docket management, even
 
 ---
 
-## 🖼 Screenshots  
+## Screenshots  
 *(Coming soon — once the UI is finalized)*
 
 - Login Screen  
@@ -44,7 +44,7 @@ Built with Python and Tkinter, MiniCourt brings together docket management, even
 
 ---
 
-## 🛠 Installation
+## Installation
 
 ### 1. Clone the repository
 
