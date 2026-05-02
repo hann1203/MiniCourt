@@ -1,5 +1,6 @@
 # app.py
 import ctypes
+
 ctypes.windll.shcore.SetProcessDpiAwareness(1)
 
 # --- Standard Library ---
@@ -25,6 +26,7 @@ from config import (
     DOCKET_BANNER_FG,
     UI_COLORS,
 )
+
 # --- Database Layer ---
 from db_layer import (
     init_db,
@@ -59,18 +61,18 @@ from event_dialog import EventDialog
 from journal_dialogs import ReflectionDialog
 from judge_profiles import JudgeProfileWindow
 
-from about_window import open_about_window 
+from about_window import open_about_window
 from theme_manager import apply_theme
 from splash_screen import AnimatedSplashScreen
 from analytics_dashboard_view import AnalyticsDashboardView
 
 # ---------------- JOURNAL DB HELPERS ----------------
 
+
 def init_journal_db():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
-    cur.execute(
-        """
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS journal_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             created_at TEXT NOT NULL,
@@ -80,13 +82,14 @@ def init_journal_db():
             linked_docket_label TEXT,
             content TEXT NOT NULL
         )
-        """
-    )
+        """)
     conn.commit()
     conn.close()
 
 
-def create_journal_entry(entry_type, title, content, linked_hearing_id=None, linked_docket_label=None):
+def create_journal_entry(
+    entry_type, title, content, linked_hearing_id=None, linked_docket_label=None
+):
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
     cur.execute(
@@ -110,13 +113,11 @@ def create_journal_entry(entry_type, title, content, linked_hearing_id=None, lin
 def get_journal_entries():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
-    cur.execute(
-        """
+    cur.execute("""
         SELECT id, created_at, type, title, linked_hearing_id, linked_docket_label
         FROM journal_entries
         ORDER BY created_at DESC
-        """
-    )
+        """)
     rows = cur.fetchall()
     conn.close()
     return rows
@@ -163,6 +164,7 @@ def delete_journal_entry(entry_id):
 
 # ---------------- DELETE ALL DATA ----------------
 
+
 def delete_all_data():
     """Wipes all hearing, event, docket, and journal data."""
     try:
@@ -181,6 +183,7 @@ def delete_all_data():
 
 
 # ---------------- THEME ----------------
+
 
 def setup_vintage_theme(root):
     style = ttk.Style(root)
@@ -236,6 +239,7 @@ def setup_vintage_theme(root):
 
 
 # ---------------- SPLASH SCREEN ----------------
+
 
 class SplashScreen(tk.Toplevel):
     def __init__(self, parent, settings: SettingsManager, on_done, delay_ms=1500):
@@ -296,6 +300,7 @@ class SplashScreen(tk.Toplevel):
             if callable(self.on_done):
                 self.on_done()
 
+
 class LoginView(ttk.Frame):
     def __init__(self, parent, on_login_success):
         super().__init__(parent)
@@ -314,7 +319,7 @@ class LoginView(ttk.Frame):
         logo = ttk.Label(
             card,
             text="MiniCourt  ⚖️",
-            font=("Georgia", 96, "bold"),   # Monumental courthouse energy
+            font=("Georgia", 96, "bold"),  # Monumental courthouse energy
         )
         logo.pack(pady=(0, 40))
 
@@ -341,7 +346,6 @@ class LoginView(ttk.Frame):
         )
         version.pack(pady=(0, 20))
 
-
         # Form
         form = ttk.Frame(card)
         form.pack(pady=20)
@@ -361,10 +365,7 @@ class LoginView(ttk.Frame):
 
         # Larger login button
         ttk.Button(
-            form,
-            text="Log In",
-            command=self.attempt_login,
-            style="Login.TButton"
+            form, text="Log In", command=self.attempt_login, style="Login.TButton"
         ).grid(row=2, column=0, columnspan=2, pady=(35, 0))
 
         # Pre-fill for convenience
@@ -373,7 +374,6 @@ class LoginView(ttk.Frame):
 
         self.correct_username = creds.get("username")
         self.correct_password = creds.get("password")
-
 
         self.entry_pass.bind("<Return>", lambda e: self.attempt_login())
 
@@ -391,7 +391,7 @@ class LoginView(ttk.Frame):
             self,
             text=f"{version.APP_NAME} v{version.VERSION}",
             font=("Segoe UI", 9),
-            foreground="#666"
+            foreground="#666",
         )
         version_label.pack(side="bottom", pady=10)
 
@@ -443,14 +443,12 @@ class MainMenuView(ttk.Frame):
             frame = ttk.Frame(grid)
             frame.grid(row=row, column=col, padx=40, pady=40)
 
-            ttk.Label(frame, text=icon_text, font=("Segoe UI Emoji", 48)).pack(pady=(0, 15))
+            ttk.Label(frame, text=icon_text, font=("Segoe UI Emoji", 48)).pack(
+                pady=(0, 15)
+            )
 
             ttk.Button(
-                frame,
-                text=text,
-                command=command,
-                width=22,
-                style="MenuButton.TButton"
+                frame, text=text, command=command, width=22, style="MenuButton.TButton"
             ).pack()
 
         # Create the 6 menu buttons
@@ -469,7 +467,9 @@ class MainMenuView(ttk.Frame):
             padding=14,
         )
 
+
 # ---------------- PLACEHOLDER VIEW ----------------
+
 
 class PlaceholderView(ttk.Frame):
     def __init__(self, parent, title, on_back_to_menu):
@@ -492,6 +492,7 @@ class PlaceholderView(ttk.Frame):
 # ---------------------------------------------------------
 
 from datetime import date  # REQUIRED for date.today()
+
 
 class PrepareYourDayView(ttk.Frame):
     """
@@ -518,34 +519,17 @@ class PrepareYourDayView(ttk.Frame):
         style = ttk.Style()
 
         # Header
-        style.configure(
-            "PrepHeader.TLabel",
-            font=("Georgia", 36, "bold")
-        )
+        style.configure("PrepHeader.TLabel", font=("Georgia", 36, "bold"))
 
         # Card titles
-        style.configure(
-            "CardTitle.TLabel",
-            font=("Georgia", 22, "bold")
-        )
+        style.configure("CardTitle.TLabel", font=("Georgia", 22, "bold"))
 
         # Buttons
-        style.configure(
-            "HubButton.TButton",
-            font=("Segoe UI", 14, "bold"),
-            padding=10
-        )
+        style.configure("HubButton.TButton", font=("Segoe UI", 14, "bold"), padding=10)
 
         # Treeview
-        style.configure(
-            "Prep.Treeview.Heading",
-            font=("Segoe UI", 14, "bold")
-        )
-        style.configure(
-            "Prep.Treeview",
-            font=("Segoe UI", 14),
-            rowheight=32
-        )
+        style.configure("Prep.Treeview.Heading", font=("Segoe UI", 14, "bold"))
+        style.configure("Prep.Treeview", font=("Segoe UI", 14), rowheight=32)
 
     # ---------------- HEADER ----------------
 
@@ -557,14 +541,12 @@ class PrepareYourDayView(ttk.Frame):
             header,
             text="Back to Menu",
             command=self.on_back_to_menu,
-            style="HubButton.TButton"
+            style="HubButton.TButton",
         ).pack(side="left", padx=8)
 
-        ttk.Label(
-            header,
-            text="Prepare Your Day",
-            style="PrepHeader.TLabel"
-        ).pack(side="left", padx=20)
+        ttk.Label(header, text="Prepare Your Day", style="PrepHeader.TLabel").pack(
+            side="left", padx=20
+        )
 
     # ---------------- MAIN LAYOUT ----------------
 
@@ -591,7 +573,9 @@ class PrepareYourDayView(ttk.Frame):
         self.entry_case_number = self.make_labeled_entry(self.card_case, "Case Number:")
         self.entry_case_type = self.make_labeled_entry(self.card_case, "Case Type:")
         self.entry_judge = self.make_labeled_entry(self.card_case, "Judge:")
-        self.entry_hearing_type = self.make_labeled_entry(self.card_case, "Hearing Type:")
+        self.entry_hearing_type = self.make_labeled_entry(
+            self.card_case, "Hearing Type:"
+        )
 
         # --- CARD 2: SCHEDULE INFO ---
         self.card_schedule = self.make_card(left, "Schedule Info")
@@ -600,12 +584,17 @@ class PrepareYourDayView(ttk.Frame):
         self.entry_date = self.make_labeled_entry(self.card_schedule, "Docket Date:")
         self.entry_date.insert(0, str(date.today()))
 
-        ttk.Label(self.card_schedule, text="Expected Pro-Se:", font=("Segoe UI", 14), background="#F7F3EB").pack(anchor="w", pady=(10, 0), padx=10)
+        ttk.Label(
+            self.card_schedule,
+            text="Expected Pro-Se:",
+            font=("Segoe UI", 14),
+            background="#F7F3EB",
+        ).pack(anchor="w", pady=(10, 0), padx=10)
         self.combo_preset = ttk.Combobox(
             self.card_schedule,
             values=["Unknown", "Yes", "No"],
             font=("Segoe UI", 14),
-            state="readonly"
+            state="readonly",
         )
         self.combo_preset.set("Unknown")
         self.combo_preset.pack(fill="x", padx=10, pady=(0, 5))
@@ -615,11 +604,7 @@ class PrepareYourDayView(ttk.Frame):
         self.card_notes.pack(fill="x", pady=(0, 20))
 
         self.text_notes = tk.Text(
-            self.card_notes,
-            height=5,
-            font=("Segoe UI", 14),
-            wrap="word",
-            bg="#F7F3EB"
+            self.card_notes, height=5, font=("Segoe UI", 14), wrap="word", bg="#F7F3EB"
         )
         self.text_notes.pack(fill="x", padx=10, pady=(5, 5))
 
@@ -631,14 +616,11 @@ class PrepareYourDayView(ttk.Frame):
             btns,
             text="Add to Docket List",
             command=self.add_entry,
-            style="HubButton.TButton"
+            style="HubButton.TButton",
         ).pack(fill="x", pady=5)
 
         ttk.Button(
-            btns,
-            text="Clear Form",
-            command=self.clear_form,
-            style="HubButton.TButton"
+            btns, text="Clear Form", command=self.clear_form, style="HubButton.TButton"
         ).pack(fill="x", pady=5)
 
     # Helper: Create a rounded-card illusion
@@ -651,17 +633,21 @@ class PrepareYourDayView(ttk.Frame):
             bg="#F7F3EB",
             bd=0,
             highlightthickness=1,
-            highlightbackground="#E0D8C8"
+            highlightbackground="#E0D8C8",
         )
         card.pack(fill="x", padx=2, pady=2)
 
-        ttk.Label(card, text=title, style="CardTitle.TLabel", background="#F7F3EB").pack(anchor="w", pady=(8, 4), padx=10)
+        ttk.Label(
+            card, text=title, style="CardTitle.TLabel", background="#F7F3EB"
+        ).pack(anchor="w", pady=(8, 4), padx=10)
 
         return card
 
     # Helper: Labeled entry field
     def make_labeled_entry(self, parent, label_text):
-        ttk.Label(parent, text=label_text, font=("Segoe UI", 14), background="#F7F3EB").pack(anchor="w", padx=10)
+        ttk.Label(
+            parent, text=label_text, font=("Segoe UI", 14), background="#F7F3EB"
+        ).pack(anchor="w", padx=10)
         entry = ttk.Entry(parent, font=("Segoe UI", 14))
         entry.pack(fill="x", padx=10, pady=(0, 8))
         return entry
@@ -672,19 +658,14 @@ class PrepareYourDayView(ttk.Frame):
         right = ttk.Frame(parent)
         right.pack(side="left", fill="both", expand=True)
 
-        ttk.Label(
-            right,
-            text="Planned Docket Entries",
-            style="CardTitle.TLabel"
-        ).pack(anchor="w", pady=(0, 10))
+        ttk.Label(right, text="Planned Docket Entries", style="CardTitle.TLabel").pack(
+            anchor="w", pady=(0, 10)
+        )
 
         columns = ("date", "case", "type", "judge", "hearing", "prose", "notes")
 
         self.tree = ttk.Treeview(
-            right,
-            columns=columns,
-            show="headings",
-            style="Prep.Treeview"
+            right, columns=columns, show="headings", style="Prep.Treeview"
         )
         self.tree.pack(fill="both", expand=True)
 
@@ -710,21 +691,21 @@ class PrepareYourDayView(ttk.Frame):
             bottom,
             text="Remove Selected",
             command=self.remove_selected,
-            style="HubButton.TButton"
+            style="HubButton.TButton",
         ).pack(side="left", padx=5)
 
         ttk.Button(
             bottom,
             text="Save Docket as CSV",
             command=self.save_csv,
-            style="HubButton.TButton"
+            style="HubButton.TButton",
         ).pack(side="left", padx=5)
 
         ttk.Button(
             bottom,
             text="Send to Docket Table",
             command=self.send_to_table,
-            style="HubButton.TButton"
+            style="HubButton.TButton",
         ).pack(side="left", padx=5)
 
     # ---------------- LOGIC ----------------
@@ -742,7 +723,9 @@ class PrepareYourDayView(ttk.Frame):
             messagebox.showerror("Missing Data", "Case Number is required.")
             return
 
-        self.tree.insert("", "end", values=(date_val, case, ctype, judge, hearing, preset, notes))
+        self.tree.insert(
+            "", "end", values=(date_val, case, ctype, judge, hearing, preset, notes)
+        )
         self.clear_form()
 
     def clear_form(self):
@@ -771,17 +754,27 @@ class PrepareYourDayView(ttk.Frame):
             return
 
         file_path = filedialog.asksaveasfilename(
-            defaultextension=".csv",
-            filetypes=[("CSV Files", "*.csv")]
+            defaultextension=".csv", filetypes=[("CSV Files", "*.csv")]
         )
 
         if not file_path:
             return
 
         import csv
+
         with open(file_path, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(["Date", "Case #", "Case Type", "Judge", "Hearing Type", "Pro-Se", "Notes"])
+            writer.writerow(
+                [
+                    "Date",
+                    "Case #",
+                    "Case Type",
+                    "Judge",
+                    "Hearing Type",
+                    "Pro-Se",
+                    "Notes",
+                ]
+            )
             for row in rows:
                 writer.writerow(row)
 
@@ -812,8 +805,8 @@ class PrepareYourDayView(ttk.Frame):
         messagebox.showinfo("Docket Sent", "Entries added to the docket table.")
 
 
-
 # ---------------- JUDGE PROFILE WINDOW ----------------
+
 
 class JudgeProfileWindow(tk.Toplevel):
     def __init__(self, parent, clear_callback, *args, **kwargs):
@@ -825,7 +818,9 @@ class JudgeProfileWindow(tk.Toplevel):
         top_frame = ttk.Frame(self)
         top_frame.pack(fill="x", padx=10, pady=(10, 0))
 
-        ttk.Button(top_frame, text="Clear Judge Data", command=clear_callback).pack(side="right")
+        ttk.Button(top_frame, text="Clear Judge Data", command=clear_callback).pack(
+            side="right"
+        )
 
         cols = (
             "judge",
@@ -866,6 +861,7 @@ class JudgeProfileWindow(tk.Toplevel):
 
 # ---------------- EVENT DIALOG ----------------
 
+
 class EventDialog(tk.Toplevel):
     def __init__(self, parent, category_key, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
@@ -885,7 +881,9 @@ class EventDialog(tk.Toplevel):
             row=0, column=0, columnspan=2, padx=10, pady=(10, 5), sticky="w"
         )
 
-        ttk.Label(self, text="Event type:").grid(row=1, column=0, padx=10, pady=5, sticky="w")
+        ttk.Label(self, text="Event type:").grid(
+            row=1, column=0, padx=10, pady=5, sticky="w"
+        )
         self.combo_subevent = ttk.Combobox(
             self,
             state="readonly",
@@ -896,7 +894,9 @@ class EventDialog(tk.Toplevel):
         if subevents:
             self.combo_subevent.current(0)
 
-        ttk.Label(self, text="Tag (optional):").grid(row=2, column=0, padx=10, pady=5, sticky="w")
+        ttk.Label(self, text="Tag (optional):").grid(
+            row=2, column=0, padx=10, pady=5, sticky="w"
+        )
         self.combo_tag = ttk.Combobox(
             self,
             state="readonly",
@@ -906,15 +906,21 @@ class EventDialog(tk.Toplevel):
         self.combo_tag.grid(row=2, column=1, padx=10, pady=5, sticky="w")
         self.combo_tag.set("")
 
-        ttk.Label(self, text="Detail (optional):").grid(row=3, column=0, padx=10, pady=5, sticky="nw")
+        ttk.Label(self, text="Detail (optional):").grid(
+            row=3, column=0, padx=10, pady=5, sticky="nw"
+        )
         self.text_detail = tk.Text(self, width=50, height=4, wrap="word")
         self.text_detail.grid(row=3, column=1, padx=10, pady=5, sticky="w")
 
         btn_frame = ttk.Frame(self)
         btn_frame.grid(row=4, column=0, columnspan=2, pady=10)
 
-        ttk.Button(btn_frame, text="Cancel", command=self.on_cancel).pack(side="right", padx=5)
-        ttk.Button(btn_frame, text="Log Event", command=self.on_ok).pack(side="right", padx=5)
+        ttk.Button(btn_frame, text="Cancel", command=self.on_cancel).pack(
+            side="right", padx=5
+        )
+        ttk.Button(btn_frame, text="Log Event", command=self.on_ok).pack(
+            side="right", padx=5
+        )
 
         self.bind("<Return>", lambda e: self.on_ok())
         self.bind("<Escape>", lambda e: self.on_cancel())
@@ -946,6 +952,7 @@ class EventDialog(tk.Toplevel):
 
 # ---------------- REFLECTION DIALOG ----------------
 
+
 class ReflectionDialog(tk.Toplevel):
     def __init__(self, parent, title_text, default_title, default_body):
         super().__init__(parent)
@@ -956,12 +963,16 @@ class ReflectionDialog(tk.Toplevel):
         self.result = None
         self.configure(bg=COLORS["bg_main"])
 
-        ttk.Label(self, text="Title:").grid(row=0, column=0, sticky="w", padx=10, pady=(10, 3))
+        ttk.Label(self, text="Title:").grid(
+            row=0, column=0, sticky="w", padx=10, pady=(10, 3)
+        )
         self.entry_title = ttk.Entry(self, width=60)
         self.entry_title.grid(row=0, column=1, padx=10, pady=(10, 3))
         self.entry_title.insert(0, default_title)
 
-        ttk.Label(self, text="Reflection:").grid(row=1, column=0, sticky="nw", padx=10, pady=3)
+        ttk.Label(self, text="Reflection:").grid(
+            row=1, column=0, sticky="nw", padx=10, pady=3
+        )
         self.text_body = tk.Text(self, width=60, height=12, wrap="word", bg="#FBF8F0")
         self.text_body.grid(row=1, column=1, padx=10, pady=3)
         if default_body:
@@ -970,8 +981,12 @@ class ReflectionDialog(tk.Toplevel):
         btn_frame = ttk.Frame(self)
         btn_frame.grid(row=2, column=0, columnspan=2, pady=10)
 
-        ttk.Button(btn_frame, text="Cancel", command=self.on_cancel).pack(side="right", padx=5)
-        ttk.Button(btn_frame, text="Save Reflection", command=self.on_ok).pack(side="right", padx=5)
+        ttk.Button(btn_frame, text="Cancel", command=self.on_cancel).pack(
+            side="right", padx=5
+        )
+        ttk.Button(btn_frame, text="Save Reflection", command=self.on_ok).pack(
+            side="right", padx=5
+        )
 
         self.bind("<Return>", lambda e: self.on_ok())
         self.bind("<Escape>", lambda e: self.on_cancel())
@@ -985,7 +1000,9 @@ class ReflectionDialog(tk.Toplevel):
         body = self.text_body.get("1.0", tk.END).strip()
 
         if not title or not body:
-            messagebox.showerror("Reflection", "Title and reflection text are required.")
+            messagebox.showerror(
+                "Reflection", "Title and reflection text are required."
+            )
             return
 
         self.result = (title, body)
@@ -999,6 +1016,7 @@ class ReflectionDialog(tk.Toplevel):
 # ---------------------------------------------------------
 # JOURNAL VIEW (Glow‑Up Version)
 # ---------------------------------------------------------
+
 
 class JournalView(ttk.Frame):
     def __init__(self, parent, on_back_to_menu):
@@ -1018,31 +1036,14 @@ class JournalView(ttk.Frame):
     def configure_styles(self):
         style = ttk.Style()
 
-        style.configure(
-            "JournalHeader.TLabel",
-            font=("Georgia", 36, "bold")
-        )
+        style.configure("JournalHeader.TLabel", font=("Georgia", 36, "bold"))
 
-        style.configure(
-            "PaneTitle.TLabel",
-            font=("Georgia", 22, "bold")
-        )
+        style.configure("PaneTitle.TLabel", font=("Georgia", 22, "bold"))
 
-        style.configure(
-            "HubButton.TButton",
-            font=("Segoe UI", 14, "bold"),
-            padding=10
-        )
+        style.configure("HubButton.TButton", font=("Segoe UI", 14, "bold"), padding=10)
 
-        style.configure(
-            "Journal.Treeview.Heading",
-            font=("Segoe UI", 14, "bold")
-        )
-        style.configure(
-            "Journal.Treeview",
-            font=("Segoe UI", 14),
-            rowheight=32
-        )
+        style.configure("Journal.Treeview.Heading", font=("Segoe UI", 14, "bold"))
+        style.configure("Journal.Treeview", font=("Segoe UI", 14), rowheight=32)
 
     # ---------------- HEADER ----------------
 
@@ -1054,20 +1055,18 @@ class JournalView(ttk.Frame):
             top,
             text="Back to Menu",
             command=self.on_back_to_menu,
-            style="HubButton.TButton"
+            style="HubButton.TButton",
         ).pack(side="left", padx=5)
 
-        ttk.Label(
-            top,
-            text="Journal",
-            style="JournalHeader.TLabel"
-        ).pack(side="left", padx=20)
+        ttk.Label(top, text="Journal", style="JournalHeader.TLabel").pack(
+            side="left", padx=20
+        )
 
         ttk.Button(
             top,
             text="New Planner Entry",
             command=self.new_planner_entry,
-            style="HubButton.TButton"
+            style="HubButton.TButton",
         ).pack(side="right", padx=5)
 
     # ---------------- MAIN LAYOUT ----------------
@@ -1080,15 +1079,13 @@ class JournalView(ttk.Frame):
         left = ttk.Frame(main)
         left.pack(side="left", fill="y", padx=(0, 30))
 
-        ttk.Label(left, text="Journal Entries", style="PaneTitle.TLabel").pack(anchor="w", pady=(0, 10))
+        ttk.Label(left, text="Journal Entries", style="PaneTitle.TLabel").pack(
+            anchor="w", pady=(0, 10)
+        )
 
         cols = ("id", "created_at", "type", "title", "hearing", "docket")
         self.tree = ttk.Treeview(
-            left,
-            columns=cols,
-            show="headings",
-            style="Journal.Treeview",
-            height=20
+            left, columns=cols, show="headings", style="Journal.Treeview", height=20
         )
         self.tree.pack(fill="y", pady=(0, 10))
 
@@ -1123,8 +1120,15 @@ class JournalView(ttk.Frame):
         btns = ttk.Frame(left)
         btns.pack(fill="x", pady=(5, 0))
 
-        ttk.Button(btns, text="Refresh", command=self.refresh_entries, style="HubButton.TButton").pack(side="left", padx=5)
-        ttk.Button(btns, text="Delete", command=self.delete_selected, style="HubButton.TButton").pack(side="left", padx=5)
+        ttk.Button(
+            btns,
+            text="Refresh",
+            command=self.refresh_entries,
+            style="HubButton.TButton",
+        ).pack(side="left", padx=5)
+        ttk.Button(
+            btns, text="Delete", command=self.delete_selected, style="HubButton.TButton"
+        ).pack(side="left", padx=5)
 
         # RIGHT PANE — tall soft‑cream card
         right = ttk.Frame(main)
@@ -1135,44 +1139,58 @@ class JournalView(ttk.Frame):
             bg="#F7F3EB",
             bd=0,
             highlightthickness=1,
-            highlightbackground="#E0D8C8"
+            highlightbackground="#E0D8C8",
         )
         card.pack(fill="both", expand=True, padx=2, pady=2)
 
-        ttk.Label(card, text="Entry Detail", style="PaneTitle.TLabel", background="#F7F3EB").pack(anchor="w", padx=15, pady=(10, 5))
+        ttk.Label(
+            card, text="Entry Detail", style="PaneTitle.TLabel", background="#F7F3EB"
+        ).pack(anchor="w", padx=15, pady=(10, 5))
 
         form = ttk.Frame(card)
         form.pack(fill="x", padx=15, pady=(5, 10))
 
         # Title
-        ttk.Label(form, text="Title:", font=("Segoe UI", 14), background="#F7F3EB").grid(row=0, column=0, sticky="w", pady=4)
+        ttk.Label(
+            form, text="Title:", font=("Segoe UI", 14), background="#F7F3EB"
+        ).grid(row=0, column=0, sticky="w", pady=4)
         self.entry_title = ttk.Entry(form, font=("Segoe UI", 14))
         self.entry_title.grid(row=0, column=1, sticky="ew", pady=4)
 
         # Type
-        ttk.Label(form, text="Type:", font=("Segoe UI", 14), background="#F7F3EB").grid(row=1, column=0, sticky="w", pady=4)
-        self.lbl_type = ttk.Label(form, text="-", font=("Segoe UI", 14), background="#F7F3EB")
+        ttk.Label(form, text="Type:", font=("Segoe UI", 14), background="#F7F3EB").grid(
+            row=1, column=0, sticky="w", pady=4
+        )
+        self.lbl_type = ttk.Label(
+            form, text="-", font=("Segoe UI", 14), background="#F7F3EB"
+        )
         self.lbl_type.grid(row=1, column=1, sticky="w", pady=4)
 
         # Hearing ID
-        ttk.Label(form, text="Linked Hearing ID:", font=("Segoe UI", 14), background="#F7F3EB").grid(row=2, column=0, sticky="w", pady=4)
-        self.lbl_hearing = ttk.Label(form, text="-", font=("Segoe UI", 14), background="#F7F3EB")
+        ttk.Label(
+            form, text="Linked Hearing ID:", font=("Segoe UI", 14), background="#F7F3EB"
+        ).grid(row=2, column=0, sticky="w", pady=4)
+        self.lbl_hearing = ttk.Label(
+            form, text="-", font=("Segoe UI", 14), background="#F7F3EB"
+        )
         self.lbl_hearing.grid(row=2, column=1, sticky="w", pady=4)
 
         # Docket Label
-        ttk.Label(form, text="Docket Label:", font=("Segoe UI", 14), background="#F7F3EB").grid(row=3, column=0, sticky="w", pady=4)
-        self.lbl_docket = ttk.Label(form, text="-", font=("Segoe UI", 14), background="#F7F3EB")
+        ttk.Label(
+            form, text="Docket Label:", font=("Segoe UI", 14), background="#F7F3EB"
+        ).grid(row=3, column=0, sticky="w", pady=4)
+        self.lbl_docket = ttk.Label(
+            form, text="-", font=("Segoe UI", 14), background="#F7F3EB"
+        )
         self.lbl_docket.grid(row=3, column=1, sticky="w", pady=4)
 
         # Notes
-        ttk.Label(card, text="Notes:", font=("Segoe UI", 14), background="#F7F3EB").pack(anchor="w", padx=15, pady=(10, 0))
+        ttk.Label(
+            card, text="Notes:", font=("Segoe UI", 14), background="#F7F3EB"
+        ).pack(anchor="w", padx=15, pady=(10, 0))
 
         self.text_body = tk.Text(
-            card,
-            wrap="word",
-            font=("Segoe UI", 14),
-            bg="#F7F3EB",
-            height=10
+            card, wrap="word", font=("Segoe UI", 14), bg="#F7F3EB", height=10
         )
         self.text_body.pack(fill="both", expand=True, padx=15, pady=(5, 10))
 
@@ -1181,7 +1199,7 @@ class JournalView(ttk.Frame):
             card,
             text="Save Changes",
             command=self.save_changes,
-            style="HubButton.TButton"
+            style="HubButton.TButton",
         ).pack(anchor="e", padx=15, pady=(0, 15))
 
     # ---------------- LOGIC (unchanged) ----------------
@@ -1195,7 +1213,14 @@ class JournalView(ttk.Frame):
             self.tree.insert(
                 "",
                 "end",
-                values=(entry_id, created_at, entry_type, title, hearing_id or "", docket_label or ""),
+                values=(
+                    entry_id,
+                    created_at,
+                    entry_type,
+                    title,
+                    hearing_id or "",
+                    docket_label or "",
+                ),
             )
 
         self.clear_detail()
@@ -1257,7 +1282,9 @@ class JournalView(ttk.Frame):
         if not sel:
             return
 
-        if not messagebox.askyesno("Delete Entry", "Delete selected journal entry/entries?"):
+        if not messagebox.askyesno(
+            "Delete Entry", "Delete selected journal entry/entries?"
+        ):
             return
 
         for item in sel:
@@ -1294,7 +1321,14 @@ class JournalView(ttk.Frame):
             self.tree.insert(
                 "",
                 "end",
-                values=(entry_id, created_at, entry_type, title, hearing_id or "", docket_label or ""),
+                values=(
+                    entry_id,
+                    created_at,
+                    entry_type,
+                    title,
+                    hearing_id or "",
+                    docket_label or "",
+                ),
             )
 
         self.clear_detail()
@@ -1356,7 +1390,9 @@ class JournalView(ttk.Frame):
         if not sel:
             return
 
-        if not messagebox.askyesno("Delete Entry", "Delete selected journal entry/entries?"):
+        if not messagebox.askyesno(
+            "Delete Entry", "Delete selected journal entry/entries?"
+        ):
             return
 
         for item in sel:
@@ -1385,6 +1421,7 @@ class JournalView(ttk.Frame):
 
 # ---------------- PRO SE EXPERIENCE SCORE ----------------
 
+
 def compute_pro_se_score(summary_row):
     num_pro_se = summary_row[8] or 0
     confusion = summary_row[9] or 0
@@ -1401,9 +1438,10 @@ def compute_pro_se_score(summary_row):
 
     return max(0, min(100, score))
 
+
 class HearingDetailDialog(tk.Toplevel):
     """
-    A formatted, single‑page summary of a hearing:
+    A formatted, single-page summary of a hearing:
     - Metadata
     - Event counts
     - Full event list
@@ -1432,7 +1470,7 @@ class HearingDetailDialog(tk.Toplevel):
             self,
             text="Hearing Summary",
             font=("Georgia", 26, "bold"),
-            background="#F7F3EB"
+            background="#F7F3EB",
         ).pack(pady=(10, 5))
 
         # Scrollable frame
@@ -1450,7 +1488,9 @@ class HearingDetailDialog(tk.Toplevel):
         self.inner = tk.Frame(canvas, bg="#F7F3EB")
         canvas.create_window((0, 0), window=self.inner, anchor="nw")
 
-        self.inner.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        self.inner.bind(
+            "<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
 
         button_row = ttk.Frame(self)
         button_row.pack(pady=10)
@@ -1459,14 +1499,11 @@ class HearingDetailDialog(tk.Toplevel):
             button_row,
             text="Export as PDF",
             command=self.export_pdf,
-            style="HubButton.TButton"
+            style="HubButton.TButton",
         ).pack(side="left", padx=10)
 
         ttk.Button(
-            button_row,
-            text="Close",
-            command=self.destroy,
-            style="HubButton.TButton"
+            button_row, text="Close", command=self.destroy, style="HubButton.TButton"
         ).pack(side="left", padx=10)
 
     # ---------------- DATA LOADING ----------------
@@ -1480,8 +1517,16 @@ class HearingDetailDialog(tk.Toplevel):
             return
 
         (
-            hid, created_at, date, case_number, case_type,
-            judge, hearing_type, num_parties, num_pro_se, notes
+            hid,
+            created_at,
+            date,
+            case_number,
+            case_type,
+            judge,
+            hearing_type,
+            num_parties,
+            num_pro_se,
+            notes,
         ) = meta
 
         # ----- METADATA SECTION -----
@@ -1515,7 +1560,9 @@ class HearingDetailDialog(tk.Toplevel):
         self.section_title("Event Log")
 
         if not events:
-            ttk.Label(self.inner, text="No events recorded.", background="#F7F3EB").pack(anchor="w", padx=20)
+            ttk.Label(
+                self.inner, text="No events recorded.", background="#F7F3EB"
+            ).pack(anchor="w", padx=20)
         else:
             for ts, cat, subcat, detail, tag in events:
                 line = f"{ts} — {cat}"
@@ -1527,20 +1574,14 @@ class HearingDetailDialog(tk.Toplevel):
                     line += f" [{tag}]"
 
                 ttk.Label(
-                    self.inner,
-                    text=line,
-                    background="#F7F3EB",
-                    font=("Segoe UI", 12)
+                    self.inner, text=line, background="#F7F3EB", font=("Segoe UI", 12)
                 ).pack(anchor="w", padx=20, pady=2)
 
     # ---------------- HELPERS ----------------
 
     def section_title(self, text):
         ttk.Label(
-            self.inner,
-            text=text,
-            font=("Georgia", 20, "bold"),
-            background="#F7F3EB"
+            self.inner, text=text, font=("Georgia", 20, "bold"), background="#F7F3EB"
         ).pack(anchor="w", padx=10, pady=(15, 5))
 
     def kv(self, key, value):
@@ -1548,17 +1589,11 @@ class HearingDetailDialog(tk.Toplevel):
         frame.pack(anchor="w", fill="x", padx=20, pady=2)
 
         ttk.Label(
-            frame,
-            text=f"{key}:",
-            font=("Segoe UI", 12, "bold"),
-            background="#F7F3EB"
+            frame, text=f"{key}:", font=("Segoe UI", 12, "bold"), background="#F7F3EB"
         ).pack(side="left")
 
         ttk.Label(
-            frame,
-            text=str(value),
-            font=("Segoe UI", 12),
-            background="#F7F3EB"
+            frame, text=str(value), font=("Segoe UI", 12), background="#F7F3EB"
         ).pack(side="left", padx=10)
 
     # ---------------- EXPORT TO PDF ----------------
@@ -1575,7 +1610,7 @@ class HearingDetailDialog(tk.Toplevel):
         path = filedialog.asksaveasfilename(
             defaultextension=".pdf",
             filetypes=[("PDF Files", "*.pdf")],
-            title="Save Hearing Summary as PDF"
+            title="Save Hearing Summary as PDF",
         )
         if not path:
             return
@@ -1585,8 +1620,16 @@ class HearingDetailDialog(tk.Toplevel):
         events = get_events_for_hearing(self.hearing_id)
 
         (
-            hid, created_at, date, case_number, case_type,
-            judge, hearing_type, num_parties, num_pro_se, notes
+            hid,
+            created_at,
+            date,
+            case_number,
+            case_type,
+            judge,
+            hearing_type,
+            num_parties,
+            num_pro_se,
+            notes,
         ) = meta
 
         # Theme-aware colors
@@ -1718,6 +1761,7 @@ class HearingDetailDialog(tk.Toplevel):
 # DATA CENTER VIEW (Glow‑Up Version)
 # ---------------------------------------------------------
 
+
 class DataCenterView(ttk.Frame):
     def __init__(self, parent, on_back_to_menu):
         super().__init__(parent)
@@ -1746,8 +1790,15 @@ class DataCenterView(ttk.Frame):
         top = ttk.Frame(self)
         top.pack(fill="x", pady=(10, 10), padx=10)
 
-        ttk.Button(top, text="Back to Menu", command=self.on_back_to_menu, style="HubButton.TButton").pack(side="left")
-        ttk.Label(top, text="Data Center", style="DCHeader.TLabel").pack(side="left", padx=20)
+        ttk.Button(
+            top,
+            text="Back to Menu",
+            command=self.on_back_to_menu,
+            style="HubButton.TButton",
+        ).pack(side="left")
+        ttk.Label(top, text="Data Center", style="DCHeader.TLabel").pack(
+            side="left", padx=20
+        )
 
     # ---------------- MAIN LAYOUT ----------------
 
@@ -1759,26 +1810,47 @@ class DataCenterView(ttk.Frame):
         left = ttk.Frame(main)
         left.pack(side="left", fill="y", padx=(0, 30))
 
-        card = tk.Frame(left, bg="#F7F3EB", highlightthickness=1, highlightbackground="#D8D0C0")
+        card = tk.Frame(
+            left, bg="#F7F3EB", highlightthickness=1, highlightbackground="#D8D0C0"
+        )
         card.pack(fill="y", padx=2, pady=2)
 
-        ttk.Label(card, text="Overview & Filters", style="PaneTitle.TLabel", background="#F7F3EB").pack(anchor="w", padx=15, pady=(10, 5))
+        ttk.Label(
+            card,
+            text="Overview & Filters",
+            style="PaneTitle.TLabel",
+            background="#F7F3EB",
+        ).pack(anchor="w", padx=15, pady=(10, 5))
 
         form = ttk.Frame(card)
         form.pack(fill="x", padx=15, pady=(5, 10))
 
         # Date filters
-        ttk.Label(form, text="From Date (YYYY-MM-DD):", font=("Segoe UI", 14), background="#F7F3EB").grid(row=0, column=0, sticky="w", pady=4)
+        ttk.Label(
+            form,
+            text="From Date (YYYY-MM-DD):",
+            font=("Segoe UI", 14),
+            background="#F7F3EB",
+        ).grid(row=0, column=0, sticky="w", pady=4)
         self.entry_from = ttk.Entry(form, font=("Segoe UI", 14))
         self.entry_from.grid(row=0, column=1, pady=4)
 
-        ttk.Label(form, text="To Date (YYYY-MM-DD):", font=("Segoe UI", 14), background="#F7F3EB").grid(row=1, column=0, sticky="w", pady=4)
+        ttk.Label(
+            form,
+            text="To Date (YYYY-MM-DD):",
+            font=("Segoe UI", 14),
+            background="#F7F3EB",
+        ).grid(row=1, column=0, sticky="w", pady=4)
         self.entry_to = ttk.Entry(form, font=("Segoe UI", 14))
         self.entry_to.grid(row=1, column=1, pady=4)
 
         # Judge filter
-        ttk.Label(form, text="Judge:", font=("Segoe UI", 14), background="#F7F3EB").grid(row=2, column=0, sticky="w", pady=4)
-        self.combo_judge = ttk.Combobox(form, values=["(All)"], font=("Segoe UI", 14), state="readonly")
+        ttk.Label(
+            form, text="Judge:", font=("Segoe UI", 14), background="#F7F3EB"
+        ).grid(row=2, column=0, sticky="w", pady=4)
+        self.combo_judge = ttk.Combobox(
+            form, values=["(All)"], font=("Segoe UI", 14), state="readonly"
+        )
         self.combo_judge.set("(All)")
         self.combo_judge.grid(row=2, column=1, pady=4)
 
@@ -1786,25 +1858,56 @@ class DataCenterView(ttk.Frame):
         btns = ttk.Frame(card)
         btns.pack(fill="x", padx=15, pady=(10, 5))
 
-        ttk.Button(btns, text="Apply Filters", style="HubButton.TButton", command=self.refresh_table).pack(fill="x", pady=3)
-        ttk.Button(btns, text="Clear Filters", style="HubButton.TButton", command=self.clear_filters).pack(fill="x", pady=3)
-        ttk.Button(btns, text="Delete All Data", style="HubButton.TButton", command=self.delete_all_data).pack(fill="x", pady=3)
+        ttk.Button(
+            btns,
+            text="Apply Filters",
+            style="HubButton.TButton",
+            command=self.refresh_table,
+        ).pack(fill="x", pady=3)
+        ttk.Button(
+            btns,
+            text="Clear Filters",
+            style="HubButton.TButton",
+            command=self.clear_filters,
+        ).pack(fill="x", pady=3)
+        ttk.Button(
+            btns,
+            text="Delete All Data",
+            style="HubButton.TButton",
+            command=self.delete_all_data,
+        ).pack(fill="x", pady=3)
 
         # Stats
-        self.lbl_total_hearings = ttk.Label(card, text="Total Hearings: 0", font=("Segoe UI", 14), background="#F7F3EB")
+        self.lbl_total_hearings = ttk.Label(
+            card, text="Total Hearings: 0", font=("Segoe UI", 14), background="#F7F3EB"
+        )
         self.lbl_total_hearings.pack(anchor="w", padx=15, pady=(10, 0))
 
-        self.lbl_total_events = ttk.Label(card, text="Total Events: 0", font=("Segoe UI", 14), background="#F7F3EB")
+        self.lbl_total_events = ttk.Label(
+            card, text="Total Events: 0", font=("Segoe UI", 14), background="#F7F3EB"
+        )
         self.lbl_total_events.pack(anchor="w", padx=15, pady=(0, 15))
 
         # RIGHT TABLE
         right = ttk.Frame(main)
         right.pack(side="left", fill="both", expand=True)
 
-        ttk.Label(right, text="Hearing Summaries", style="PaneTitle.TLabel").pack(anchor="w", pady=(0, 10))
+        ttk.Label(right, text="Hearing Summaries", style="PaneTitle.TLabel").pack(
+            anchor="w", pady=(0, 10)
+        )
 
-        cols = ("id", "date", "case_number", "case_type", "judge", "hearing_type", "total_events")
-        self.tree = ttk.Treeview(right, columns=cols, show="headings", style="DC.Treeview")
+        cols = (
+            "id",
+            "date",
+            "case_number",
+            "case_type",
+            "judge",
+            "hearing_type",
+            "total_events",
+        )
+        self.tree = ttk.Treeview(
+            right, columns=cols, show="headings", style="DC.Treeview"
+        )
         self.tree.pack(fill="both", expand=True)
 
         headers = [
@@ -1838,8 +1941,30 @@ class DataCenterView(ttk.Frame):
         self.lbl_total_events.config(text=f"Total Events: {total_events}")
 
         for r in rows:
-            hid, created_at, date, case_number, case_type, judge, hearing_type, *_ , total_events = r
-            self.tree.insert("", "end", values=(hid, date, case_number, case_type, judge, hearing_type, total_events))
+            (
+                hid,
+                created_at,
+                date,
+                case_number,
+                case_type,
+                judge,
+                hearing_type,
+                *_,
+                total_events,
+            ) = r
+            self.tree.insert(
+                "",
+                "end",
+                values=(
+                    hid,
+                    date,
+                    case_number,
+                    case_type,
+                    judge,
+                    hearing_type,
+                    total_events,
+                ),
+            )
 
     def clear_filters(self):
         self.entry_from.delete(0, "end")
@@ -1858,11 +1983,15 @@ class DataCenterView(ttk.Frame):
     def delete_all_data(self):
         if not messagebox.askyesno(
             "Delete All Data",
-            "This will permanently delete ALL hearings, events, docket entries, and analytics.\nContinue?"
+            "This will permanently delete ALL hearings, events, docket entries, and analytics.\nContinue?",
         ):
             return
 
-        from db_layer import delete_all_hearings, delete_all_events, delete_all_docket_entries
+        from db_layer import (
+            delete_all_hearings,
+            delete_all_events,
+            delete_all_docket_entries,
+        )
 
         try:
             delete_all_events()
@@ -1876,6 +2005,7 @@ class DataCenterView(ttk.Frame):
 
 
 # --------COURTROOM LOGGER VIEW (GLOW‑UP)---------------
+
 
 class CourtroomLoggerView(ttk.Frame):
     def __init__(self, parent, on_back_to_menu):
@@ -1932,7 +2062,9 @@ class CourtroomLoggerView(ttk.Frame):
         header = ttk.Frame(self)
         header.pack(fill="x", padx=15, pady=(10, 5))
 
-        ttk.Label(header, text="Courtroom Logger", style="CLHeader.TLabel").pack(side="left")
+        ttk.Label(header, text="Courtroom Logger", style="CLHeader.TLabel").pack(
+            side="left"
+        )
 
         btns = ttk.Frame(header)
         btns.pack(side="right")
@@ -1988,7 +2120,7 @@ class CourtroomLoggerView(ttk.Frame):
             text="",
             bg=DOCKET_BANNER_BG,
             fg=DOCKET_BANNER_FG,
-            font=("Segoe UI", 12, "bold")
+            font=("Segoe UI", 12, "bold"),
         )
         self.banner_label.pack(padx=10, pady=4)
 
@@ -2163,7 +2295,9 @@ class CourtroomLoggerView(ttk.Frame):
             state="disabled",
             style="HubButton.TButton",
         )
-        self.btn_repeat_last.grid(row=1, column=0, columnspan=col, sticky="ew", padx=6, pady=(4, 6))
+        self.btn_repeat_last.grid(
+            row=1, column=0, columnspan=col, sticky="ew", padx=6, pady=(4, 6)
+        )
 
         self.set_event_buttons_state("disabled")
 
@@ -2293,6 +2427,7 @@ class CourtroomLoggerView(ttk.Frame):
         ).pack(anchor="w", padx=12, pady=(8, 4))
 
         self.build_notes_frame(notes_card)
+
     # ---------------- EVENT LIST ----------------
 
     def build_event_list_frame(self, parent):
@@ -2305,11 +2440,13 @@ class CourtroomLoggerView(ttk.Frame):
             height=12,
             bg=UI_COLORS["event_list_bg"],
             fg=UI_COLORS["event_list_fg"],
-            activestyle="none"
+            activestyle="none",
         )
         self.event_list.pack(side="left", fill="both", expand=True, padx=(0, 5), pady=5)
 
-        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=self.event_list.yview)
+        scrollbar = ttk.Scrollbar(
+            frame, orient="vertical", command=self.event_list.yview
+        )
         scrollbar.pack(side="right", fill="y", padx=(0, 0), pady=5)
         self.event_list.config(yscrollcommand=scrollbar.set)
 
@@ -2337,9 +2474,7 @@ class CourtroomLoggerView(ttk.Frame):
             self.event_list.itemconfig(tk.END, background=UI_COLORS["event_list_bg"])
             self.event_list.itemconfig(tk.END, foreground="black")
             self.event_list.itemconfig(
-                tk.END,
-                selectbackground=stripe,
-                selectforeground="white"
+                tk.END, selectbackground=stripe, selectforeground="white"
             )
 
     # ---------------- NOTES PANEL ----------------
@@ -2349,10 +2484,7 @@ class CourtroomLoggerView(ttk.Frame):
         frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
         self.text_notes = tk.Text(
-            frame,
-            height=10,
-            wrap="word",
-            bg=UI_COLORS["notes_bg"]
+            frame, height=10, wrap="word", bg=UI_COLORS["notes_bg"]
         )
         self.text_notes.pack(fill="both", expand=True, padx=5, pady=5)
 
@@ -2407,9 +2539,11 @@ class CourtroomLoggerView(ttk.Frame):
             frame,
             columns=("case", "type", "judge", "hearing"),
             show="headings",
-            height=6
+            height=6,
         )
-        self.tree_docket.pack(side="left", fill="both", expand=True, padx=(0, 5), pady=5)
+        self.tree_docket.pack(
+            side="left", fill="both", expand=True, padx=(0, 5), pady=5
+        )
 
         self.tree_docket.heading("case", text="Case #")
         self.tree_docket.heading("type", text="Case Type")
@@ -2423,9 +2557,15 @@ class CourtroomLoggerView(ttk.Frame):
         btn_frame = ttk.Frame(parent)
         btn_frame.pack(fill="x", padx=10, pady=(0, 10))
 
-        ttk.Button(btn_frame, text="Start Docket Mode", command=self.start_docket_mode).pack(side="left", padx=5)
-        ttk.Button(btn_frame, text="Finish Docket Batch", command=self.finish_docket_batch).pack(side="left", padx=5)
-        ttk.Button(btn_frame, text="Clear Docket Table", command=self.clear_docket_table).pack(side="left", padx=5)
+        ttk.Button(
+            btn_frame, text="Start Docket Mode", command=self.start_docket_mode
+        ).pack(side="left", padx=5)
+        ttk.Button(
+            btn_frame, text="Finish Docket Batch", command=self.finish_docket_batch
+        ).pack(side="left", padx=5)
+        ttk.Button(
+            btn_frame, text="Clear Docket Table", command=self.clear_docket_table
+        ).pack(side="left", padx=5)
 
         self.refresh_docket_list()
 
@@ -2440,7 +2580,7 @@ class CourtroomLoggerView(ttk.Frame):
                 "end",
                 iid=entry_id,
                 values=(case_number, case_type, judge, hearing_type),
-                tags=("used",) if used else ()
+                tags=("used",) if used else (),
             )
 
     # ---------------- DOCKET MODE ----------------
@@ -2466,7 +2606,9 @@ class CourtroomLoggerView(ttk.Frame):
             self.update_docket_banner()
             return
 
-        entry_id, case_number, case_type, judge, hearing_type, used = self.docket_queue.pop(0)
+        entry_id, case_number, case_type, judge, hearing_type, used = (
+            self.docket_queue.pop(0)
+        )
         self.selected_docket_id = entry_id
 
         self.entry_case_number.delete(0, tk.END)
@@ -2486,7 +2628,9 @@ class CourtroomLoggerView(ttk.Frame):
 
         self.update_docket_banner()
 
-        messagebox.showinfo("Docket", f"Loaded docket case: {case_number or '(no case #)'}")
+        messagebox.showinfo(
+            "Docket", f"Loaded docket case: {case_number or '(no case #)'}"
+        )
 
     # ---------------- HEARING LIFECYCLE ----------------
 
@@ -2494,7 +2638,7 @@ class CourtroomLoggerView(ttk.Frame):
         if self.current_hearing_id is not None:
             if not messagebox.askyesno(
                 "Active Hearing",
-                "A hearing is already active. Start a new one and close the current?"
+                "A hearing is already active. Start a new one and close the current?",
             ):
                 return
             self.end_hearing(force=True)
@@ -2503,7 +2647,9 @@ class CourtroomLoggerView(ttk.Frame):
             num_parties = int(self.entry_num_parties.get() or 0)
             num_pro_se = int(self.entry_num_pro_se.get() or 0)
         except ValueError:
-            messagebox.showerror("Input Error", "Number of parties and pro se must be integers.")
+            messagebox.showerror(
+                "Input Error", "Number of parties and pro se must be integers."
+            )
             return
 
         date = self.entry_date.get().strip()
@@ -2548,7 +2694,9 @@ class CourtroomLoggerView(ttk.Frame):
     def end_hearing(self, force=False):
         if self.current_hearing_id is None:
             if not force:
-                messagebox.showinfo("No Active Hearing", "There is no active hearing to end.")
+                messagebox.showinfo(
+                    "No Active Hearing", "There is no active hearing to end."
+                )
             return
 
         # Confirm (unless forced or in docket mode)
@@ -2606,14 +2754,12 @@ class CourtroomLoggerView(ttk.Frame):
             parts = [p for p in parts if p]
             if parts:
                 default_name = "_".join(parts)
-            default_reflection_title = (
-                f"Hearing Reflection – {date or ''} – {case_number or hearing_type or ''}"
-            )
+            default_reflection_title = f"Hearing Reflection – {date or ''} – {case_number or hearing_type or ''}"
 
         filepath = filedialog.asksaveasfilename(
             defaultextension=".txt",
             initialfile=default_name,
-            filetypes=[("Text files", "*.txt"), ("All Files", "*.*")]
+            filetypes=[("Text files", "*.txt"), ("All Files", "*.*")],
         )
 
         # If user cancels, skip export but still end hearing cleanly
@@ -2626,8 +2772,7 @@ class CourtroomLoggerView(ttk.Frame):
                     duration_str=duration_str,
                 )
                 messagebox.showinfo(
-                    "Hearing Saved",
-                    f"Saved:\n{txt_path}\n{pdf_path}\n{csv_path}"
+                    "Hearing Saved", f"Saved:\n{txt_path}\n{pdf_path}\n{csv_path}"
                 )
             except Exception as e:
                 messagebox.showerror("Export Error", f"Could not export files:\n{e}")
@@ -2645,7 +2790,10 @@ class CourtroomLoggerView(ttk.Frame):
         if duration_str:
             conn = sqlite3.connect(DB_NAME)
             cur = conn.cursor()
-            cur.execute("UPDATE hearings SET duration = ? WHERE id = ?", (duration_str, self.current_hearing_id))
+            cur.execute(
+                "UPDATE hearings SET duration = ? WHERE id = ?",
+                (duration_str, self.current_hearing_id),
+            )
             conn.commit()
             conn.close()
 
@@ -2689,7 +2837,7 @@ class CourtroomLoggerView(ttk.Frame):
         filepath = filedialog.asksaveasfilename(
             defaultextension=".txt",
             initialfile="docket_summary",
-            filetypes=[("Text files", "*.txt"), ("All Files", "*.*")]
+            filetypes=[("Text files", "*.txt"), ("All Files", "*.*")],
         )
 
         if not filepath:
@@ -2702,13 +2850,16 @@ class CourtroomLoggerView(ttk.Frame):
         base, _ = os.path.splitext(filepath)
 
         try:
-            txt_path, pdf_path, csv_path = export_docket_batch(base, self.docket_hearing_ids)
+            txt_path, pdf_path, csv_path = export_docket_batch(
+                base, self.docket_hearing_ids
+            )
             messagebox.showinfo(
-                "Docket Complete",
-                f"Saved:\n{txt_path}\n{pdf_path}\n{csv_path}"
+                "Docket Complete", f"Saved:\n{txt_path}\n{pdf_path}\n{csv_path}"
             )
         except Exception as e:
-            messagebox.showerror("Docket Export Error", f"Could not export docket:\n{e}")
+            messagebox.showerror(
+                "Docket Export Error", f"Could not export docket:\n{e}"
+            )
 
         self.open_docket_reflection(self.docket_hearing_ids, base)
 
@@ -2721,7 +2872,7 @@ class CourtroomLoggerView(ttk.Frame):
     def clear_docket_table(self):
         if not messagebox.askyesno(
             "Clear Docket",
-            "This will permanently delete ALL docket entries.\nContinue?"
+            "This will permanently delete ALL docket entries.\nContinue?",
         ):
             return
 
@@ -2730,10 +2881,11 @@ class CourtroomLoggerView(ttk.Frame):
         try:
             delete_all_docket_entries()
             self.refresh_docket_list()
-            messagebox.showinfo("Docket Cleared", "All docket entries have been removed.")
+            messagebox.showinfo(
+                "Docket Cleared", "All docket entries have been removed."
+            )
         except Exception as e:
             messagebox.showerror("Error", f"Could not clear docket:\n{e}")
-
 
     def open_docket_reflection(self, hearing_ids, base_label):
         if not hearing_ids:
@@ -2789,7 +2941,7 @@ class CourtroomLoggerView(ttk.Frame):
         filepath = filedialog.asksaveasfilename(
             defaultextension=".csv",
             initialfile=default_name,
-            filetypes=[("CSV Files", "*.csv"), ("All Files", "*.*")]
+            filetypes=[("CSV Files", "*.csv"), ("All Files", "*.*")],
         )
 
         if not filepath:
@@ -2820,8 +2972,7 @@ class CourtroomLoggerView(ttk.Frame):
                     writer.writerow(row)
 
             messagebox.showinfo(
-                "Export Complete",
-                f"Summary exported to:\n{os.path.abspath(filepath)}"
+                "Export Complete", f"Summary exported to:\n{os.path.abspath(filepath)}"
             )
         except Exception as e:
             messagebox.showerror("Export Error", f"Could not export summary:\n{e}")
@@ -2843,7 +2994,9 @@ class CourtroomLoggerView(ttk.Frame):
                     case_number = row.get("case_number") or row.get("CaseNumber") or ""
                     case_type = row.get("case_type") or row.get("CaseType") or ""
                     judge = row.get("judge") or row.get("Judge") or ""
-                    hearing_type = row.get("hearing_type") or row.get("HearingType") or ""
+                    hearing_type = (
+                        row.get("hearing_type") or row.get("HearingType") or ""
+                    )
 
                     insert_docket_entry(case_number, case_type, judge, hearing_type)
                     count += 1
@@ -2861,7 +3014,7 @@ class CourtroomLoggerView(ttk.Frame):
     def clear_judge_data(self):
         if not messagebox.askyesno(
             "Clear Judge Data",
-            "This will clear judge names from all hearings and analytics.\nContinue?"
+            "This will clear judge names from all hearings and analytics.\nContinue?",
         ):
             return
 
@@ -2873,14 +3026,18 @@ class CourtroomLoggerView(ttk.Frame):
             conn.close()
             messagebox.showinfo("Judge Data", "Judge data cleared.")
         except Exception as e:
-            messagebox.showerror("Judge Data Error", f"Could not clear judge data:\n{e}")
+            messagebox.showerror(
+                "Judge Data Error", f"Could not clear judge data:\n{e}"
+            )
 
     def open_judge_profiles(self):
         JudgeProfileWindow(self, clear_callback=self.clear_judge_data)
 
     def log_event_category(self, category_key):
         if self.current_hearing_id is None:
-            messagebox.showwarning("No Active Hearing", "Start a hearing before logging events.")
+            messagebox.showwarning(
+                "No Active Hearing", "Start a hearing before logging events."
+            )
             return
 
         cfg = EVENT_DEFINITIONS.get(category_key)
@@ -2945,7 +3102,9 @@ class AppController:
         menu_font.configure(family="Segoe UI", size=int(12 * UI_SCALE))
 
         heading_font = tkfont.nametofont("TkHeadingFont")
-        heading_font.configure(family="Segoe UI", size=int(14 * UI_SCALE), weight="bold")
+        heading_font.configure(
+            family="Segoe UI", size=int(14 * UI_SCALE), weight="bold"
+        )
 
         # ---------------- SETTINGS ----------------
         self.settings = SettingsManager()
@@ -2975,17 +3134,18 @@ class AppController:
         menu_bar.add_cascade(label="Settings", menu=settings_menu)
 
         help_menu = tk.Menu(menu_bar, tearoff=0)
-        help_menu.add_command(label="About MiniCourt", command=lambda: messagebox.showinfo("About", "MiniCourt 2.0"))
+        help_menu.add_command(
+            label="About MiniCourt",
+            command=lambda: messagebox.showinfo("About", "MiniCourt 2.0"),
+        )
         menu_bar.add_cascade(label="Help", menu=help_menu)
 
         # Analytics Menu
         analytics_menu = tk.Menu(menu_bar, tearoff=0)
         analytics_menu.add_command(
-            label="Analytics Dashboard",
-            command=self.show_analytics_dashboard
+            label="Analytics Dashboard", command=self.show_analytics_dashboard
         )
         menu_bar.add_cascade(label="Analytics", menu=analytics_menu)
-
 
         # ---------------- VIEW CONTAINER ----------------
         self.current_view = None
@@ -3055,10 +3215,14 @@ class AppController:
         self.status_frame = ttk.Frame(self.root)
         self.status_frame.pack(side="bottom", fill="x")
 
-        self.status_label = ttk.Label(self.status_frame, text="Ready", anchor="w", font=("Segoe UI", 20))
+        self.status_label = ttk.Label(
+            self.status_frame, text="Ready", anchor="w", font=("Segoe UI", 20)
+        )
         self.status_label.pack(side="left", padx=10)
 
-        self.time_label = ttk.Label(self.status_frame, text="", anchor="e", font=("Segoe UI", 20))
+        self.time_label = ttk.Label(
+            self.status_frame, text="", anchor="e", font=("Segoe UI", 20)
+        )
         self.time_label.pack(side="right", padx=10)
 
         self.update_status_bar()
@@ -3068,7 +3232,9 @@ class AppController:
         self.time_label.config(text=now)
 
         active = getattr(self.current_view, "current_hearing_id", None)
-        self.status_label.config(text=f"Active Hearing: {active}" if active else "Ready")
+        self.status_label.config(
+            text=f"Active Hearing: {active}" if active else "Ready"
+        )
 
         self.root.after(1000, self.update_status_bar)
 
@@ -3080,7 +3246,7 @@ class AppController:
             self.current_view = None
 
     def show_startup_view(self):
-        self.root.deiconify() 
+        self.root.deiconify()
         startup = self.settings.settings.get("startup_view", "login").lower()
         if startup == "menu":
             self.show_main_menu()
@@ -3107,12 +3273,16 @@ class AppController:
 
     def show_prepare_day(self):
         self.clear_view()
-        self.current_view = PrepareYourDayView(self.root, on_back_to_menu=self.show_main_menu)
+        self.current_view = PrepareYourDayView(
+            self.root, on_back_to_menu=self.show_main_menu
+        )
         self.current_view.pack(fill="both", expand=True)
 
     def show_courtroom_logger(self):
         self.clear_view()
-        self.current_view = CourtroomLoggerView(self.root, on_back_to_menu=self.show_main_menu)
+        self.current_view = CourtroomLoggerView(
+            self.root, on_back_to_menu=self.show_main_menu
+        )
         self.current_view.pack(fill="both", expand=True)
 
     def show_journal(self):
@@ -3122,12 +3292,16 @@ class AppController:
 
     def show_data_center(self):
         self.clear_view()
-        self.current_view = DataCenterView(self.root, on_back_to_menu=self.show_main_menu)
+        self.current_view = DataCenterView(
+            self.root, on_back_to_menu=self.show_main_menu
+        )
         self.current_view.pack(fill="both", expand=True)
 
     def show_resource_hub(self):
         self.clear_view()
-        self.current_view = ResourceHubView(self.root, on_back_to_menu=self.show_main_menu)
+        self.current_view = ResourceHubView(
+            self.root, on_back_to_menu=self.show_main_menu
+        )
         self.current_view.pack(fill="both", expand=True)
 
     def show_settings(self):
@@ -3136,7 +3310,7 @@ class AppController:
             self.root,
             settings_manager=self.settings,
             on_back_to_menu=self.show_main_menu,
-            on_theme_change=self.set_theme,   # ⭐ NEW: callback for instant theme switching
+            on_theme_change=self.set_theme,  # ⭐ NEW: callback for instant theme switching
         )
         self.current_view.pack(fill="both", expand=True)
 
@@ -3148,7 +3322,6 @@ class AppController:
             settings=self.settings,
         )
         self.current_view.pack(fill="both", expand=True)
-
 
     # ---------------- SHORTCUTS ----------------
 
@@ -3164,7 +3337,10 @@ class AppController:
     def save_notes_global(self):
         if hasattr(self.current_view, "text_notes"):
             notes = self.current_view.text_notes.get("1.0", "end").strip()
-            if hasattr(self.current_view, "current_hearing_id") and self.current_view.current_hearing_id:
+            if (
+                hasattr(self.current_view, "current_hearing_id")
+                and self.current_view.current_hearing_id
+            ):
                 update_hearing_notes(self.current_view.current_hearing_id, notes)
                 messagebox.showinfo("Saved", "Notes saved.")
 
@@ -3182,6 +3358,7 @@ class AppController:
 
 
 # ---------------- MAIN ENTRY POINT ----------------
+
 
 def main():
     root = tk.Tk()
