@@ -26,6 +26,11 @@ def init_db():
         """
     )
 
+    try: 
+        cur.execute("ALTER TABLE hearings ADD COLUMN duration TEXT")
+    except sqlite3.OperationalError:
+        pass
+
     # ---------------- EVENTS TABLE ----------------
     cur.execute(
         """
@@ -587,3 +592,87 @@ def create_journal_entry(entry_type, title, content, linked_hearing_id=None, lin
     )
     conn.commit()
     conn.close()
+
+# -----------------DB HELPERS---------------
+
+def delete_all_hearings():
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM hearings")
+    conn.commit()
+    conn.close()
+
+
+def delete_all_events():
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM events")
+    conn.commit()
+    conn.close()
+
+
+def delete_all_docket_entries():
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM docket")
+    conn.commit()
+    conn.close()
+
+def get_all_hearings():
+    """
+    Returns all hearings with:
+    (id, created_at, date, case_number, case_type,
+     judge, hearing_type, num_parties, num_pro_se, duration)
+    """
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            id,
+            created_at,
+            date,
+            case_number,
+            case_type,
+            judge,
+            hearing_type,
+            num_parties,
+            num_pro_se,
+            duration
+        FROM hearings
+        ORDER BY date ASC
+    """)
+
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+def get_all_judges():
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("SELECT DISTINCT judge FROM hearings WHERE judge IS NOT NULL AND judge != '' ORDER BY judge ASC")
+    rows = [r[0] for r in cur.fetchall()]
+
+    conn.close()
+    return rows
+
+def get_all_case_types():
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("SELECT DISTINCT case_type FROM hearings WHERE case_type IS NOT NULL AND case_type != '' ORDER BY case_type ASC")
+    rows = [r[0] for r in cur.fetchall()]
+
+    conn.close()
+    return rows
+
+def get_all_hearing_types():
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("SELECT DISTINCT hearing_type FROM hearings WHERE hearing_type IS NOT NULL AND hearing_type != '' ORDER BY hearing_type ASC")
+    rows = [r[0] for r in cur.fetchall()]
+
+    conn.close()
+    return rows

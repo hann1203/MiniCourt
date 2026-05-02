@@ -86,6 +86,22 @@ def open_about_window(parent):
     )
     copyright_label.pack(pady=(10, 0))
 
+    # --- GitHub Link ---
+    github_label = ttk.Label(
+        container,
+        text="View MiniCourt on GitHub",
+        font=("Segoe UI", 11, "underline"),
+        foreground="#0645AD",
+        cursor="hand2"
+    )
+    github_label.pack(pady=(10, 0))
+
+    def open_github(event):
+        import webbrowser
+        webbrowser.open("https://github.com/hann1203/MiniCourt")
+
+    github_label.bind("<Button-1>", open_github)
+
     # --- Close Button ---
     close_btn = ttk.Button(
         container,

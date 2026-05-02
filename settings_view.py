@@ -5,15 +5,16 @@ from settings_manager import SettingsManager
 
 class SettingsView(ttk.Frame):
     """
-    Simplified Settings screen for MiniCourt.
-    Fully compatible with the new SettingsManager and app.py.
+    Settings screen for MiniCourt.
+    Now supports instant theme switching via callback.
     """
 
-    def __init__(self, parent, settings_manager: SettingsManager, on_back_to_menu):
+    def __init__(self, parent, settings_manager: SettingsManager, on_back_to_menu, on_theme_change):
         super().__init__(parent)
         self.parent = parent
         self.manager = settings_manager
         self.on_back_to_menu = on_back_to_menu
+        self.on_theme_change = on_theme_change   # ⭐ NEW CALLBACK
 
         self.build_header()
         self.build_layout()
@@ -27,11 +28,7 @@ class SettingsView(ttk.Frame):
 
         ttk.Button(top, text="Back to Menu", command=self.on_back_to_menu).pack(side="left", padx=5)
 
-        ttk.Label(
-            top,
-            text="Settings",
-            font=("Segoe UI", 12, "bold"),
-        ).pack(side="left", padx=10)
+        ttk.Label(top, text="Settings", font=("Segoe UI", 12, "bold")).pack(side="left", padx=10)
 
     # ---------------- MAIN LAYOUT ----------------
 
@@ -88,7 +85,19 @@ class SettingsView(ttk.Frame):
         ttk.Entry(icon_frame, textvariable=self.var_icon, width=30).pack(side="left", padx=(0, 5))
         ttk.Button(icon_frame, text="Browse", command=self.pick_icon).pack(side="left")
 
-        # Footer Buttons
+        # ---------------- THEME MODE ----------------
+        ttk.Label(main, text="Theme Mode:").grid(row=7, column=0, sticky="w", padx=5, pady=5)
+
+        self.var_theme = tk.StringVar()
+        ttk.Combobox(
+            main,
+            textvariable=self.var_theme,
+            values=["light", "dark"],
+            state="readonly",
+            width=20,
+        ).grid(row=7, column=1, padx=5, pady=5)
+
+        # ---------------- FOOTER ----------------
         footer = ttk.Frame(self)
         footer.pack(fill="x", pady=10)
 
@@ -108,6 +117,7 @@ class SettingsView(ttk.Frame):
         self.var_fullscreen.set(s.get("fullscreen_on_startup", False))
         self.var_maximize.set(s.get("maximize_on_startup", True))
         self.var_icon.set(s.get("icon_path", ""))
+        self.var_theme.set(s.get("theme_mode", "light"))
 
     # ---------------- APPLY ----------------
 
@@ -121,6 +131,10 @@ class SettingsView(ttk.Frame):
         s["fullscreen_on_startup"] = self.var_fullscreen.get()
         s["maximize_on_startup"] = self.var_maximize.get()
         s["icon_path"] = self.var_icon.get()
+        s["theme_mode"] = self.var_theme.get()
+
+        # ⭐ INSTANT THEME SWITCH
+        self.on_theme_change(self.var_theme.get())
 
         messagebox.showinfo("Settings Applied", "Settings have been applied.")
 
@@ -130,6 +144,7 @@ class SettingsView(ttk.Frame):
         for key, value in self.manager.settings.items():
             self.manager.set(key, value)
 
+        self.manager.set("theme_mode", self.var_theme.get())
         messagebox.showinfo("Settings Saved", "Settings saved successfully.")
 
     # ---------------- RESTORE DEFAULTS ----------------

@@ -60,6 +60,9 @@ from journal_dialogs import ReflectionDialog
 from judge_profiles import JudgeProfileWindow
 
 from about_window import open_about_window 
+from theme_manager import apply_theme
+from splash_screen import AnimatedSplashScreen
+from analytics_dashboard_view import AnalyticsDashboardView
 
 # ---------------- JOURNAL DB HELPERS ----------------
 
@@ -597,7 +600,7 @@ class PrepareYourDayView(ttk.Frame):
         self.entry_date = self.make_labeled_entry(self.card_schedule, "Docket Date:")
         self.entry_date.insert(0, str(date.today()))
 
-        ttk.Label(self.card_schedule, text="Expected Pre-Set:", font=("Segoe UI", 14), background="#F7F3EB").pack(anchor="w", pady=(10, 0), padx=10)
+        ttk.Label(self.card_schedule, text="Expected Pro-Se:", font=("Segoe UI", 14), background="#F7F3EB").pack(anchor="w", pady=(10, 0), padx=10)
         self.combo_preset = ttk.Combobox(
             self.card_schedule,
             values=["Unknown", "Yes", "No"],
@@ -675,7 +678,7 @@ class PrepareYourDayView(ttk.Frame):
             style="CardTitle.TLabel"
         ).pack(anchor="w", pady=(0, 10))
 
-        columns = ("date", "case", "type", "judge", "hearing", "preset", "notes")
+        columns = ("date", "case", "type", "judge", "hearing", "prose", "notes")
 
         self.tree = ttk.Treeview(
             right,
@@ -691,7 +694,7 @@ class PrepareYourDayView(ttk.Frame):
             ("type", "Case Type"),
             ("judge", "Judge"),
             ("hearing", "Hearing Type"),
-            ("preset", "Pre-Set"),
+            ("prose", "Pro-Se"),
             ("notes", "Notes"),
         ]
 
@@ -758,10 +761,57 @@ class PrepareYourDayView(ttk.Frame):
             self.tree.delete(item)
 
     def save_csv(self):
-        messagebox.showinfo("CSV", "CSV export not implemented yet.")
+        # Extract rows directly from the Treeview
+        rows = []
+        for item in self.tree.get_children():
+            rows.append(self.tree.item(item, "values"))
+
+        if not rows:
+            messagebox.showwarning("No Data", "There is no docket data to save.")
+            return
+
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".csv",
+            filetypes=[("CSV Files", "*.csv")]
+        )
+
+        if not file_path:
+            return
+
+        import csv
+        with open(file_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Date", "Case #", "Case Type", "Judge", "Hearing Type", "Pro-Se", "Notes"])
+            for row in rows:
+                writer.writerow(row)
+
+        messagebox.showinfo("Saved", "Docket saved successfully.")
 
     def send_to_table(self):
-        messagebox.showinfo("Send", "Sending to docket table not implemented yet.")
+        from db_layer import insert_docket_entry
+
+        rows = []
+        for item in self.tree.get_children():
+            rows.append(self.tree.item(item, "values"))
+
+        if not rows:
+            messagebox.showwarning("No Data", "No docket entries to send.")
+            return
+
+        # Insert into DB
+        for date_val, case, ctype, judge, hearing, prose, notes in rows:
+            insert_docket_entry(case, ctype, judge, hearing)
+
+        # Refresh Courtroom Logger docket list if it's open
+        for child in self.parent.winfo_children():
+            # We detect by attribute, not by class import
+            if hasattr(child, "refresh_docket_list"):
+                child.refresh_docket_list()
+                break
+
+        messagebox.showinfo("Docket Sent", "Entries added to the docket table.")
+
+
 
 # ---------------- JUDGE PROFILE WINDOW ----------------
 
@@ -1351,6 +1401,318 @@ def compute_pro_se_score(summary_row):
 
     return max(0, min(100, score))
 
+class HearingDetailDialog(tk.Toplevel):
+    """
+    A formatted, single‑page summary of a hearing:
+    - Metadata
+    - Event counts
+    - Full event list
+    """
+
+    def __init__(self, parent, hearing_id):
+        super().__init__(parent)
+        self.title("Hearing Details")
+        self.geometry("700x700")
+        self.configure(bg="#F7F3EB")
+
+        self.hearing_id = hearing_id
+
+        # Modal behavior
+        self.transient(parent)
+        self.grab_set()
+
+        self.build_ui()
+        self.load_data()
+
+    # ---------------- UI ----------------
+
+    def build_ui(self):
+        # Title
+        ttk.Label(
+            self,
+            text="Hearing Summary",
+            font=("Georgia", 26, "bold"),
+            background="#F7F3EB"
+        ).pack(pady=(10, 5))
+
+        # Scrollable frame
+        container = ttk.Frame(self)
+        container.pack(fill="both", expand=True, padx=10, pady=10)
+
+        canvas = tk.Canvas(container, bg="#F7F3EB", highlightthickness=0)
+        canvas.pack(side="left", fill="both", expand=True)
+
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        scrollbar.pack(side="right", fill="y")
+
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        self.inner = tk.Frame(canvas, bg="#F7F3EB")
+        canvas.create_window((0, 0), window=self.inner, anchor="nw")
+
+        self.inner.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+
+        button_row = ttk.Frame(self)
+        button_row.pack(pady=10)
+
+        ttk.Button(
+            button_row,
+            text="Export as PDF",
+            command=self.export_pdf,
+            style="HubButton.TButton"
+        ).pack(side="left", padx=10)
+
+        ttk.Button(
+            button_row,
+            text="Close",
+            command=self.destroy,
+            style="HubButton.TButton"
+        ).pack(side="left", padx=10)
+
+    # ---------------- DATA LOADING ----------------
+
+    def load_data(self):
+        meta = get_hearing_metadata(self.hearing_id)
+        events = get_events_for_hearing(self.hearing_id)
+
+        if not meta:
+            ttk.Label(self.inner, text="No data found.", background="#F7F3EB").pack()
+            return
+
+        (
+            hid, created_at, date, case_number, case_type,
+            judge, hearing_type, num_parties, num_pro_se, notes
+        ) = meta
+
+        # ----- METADATA SECTION -----
+        self.section_title("Hearing Information")
+
+        self.kv("Date", date)
+        self.kv("Case Number", case_number or "—")
+        self.kv("Case Type", case_type or "—")
+        self.kv("Judge", judge or "—")
+        self.kv("Hearing Type", hearing_type or "—")
+        self.kv("# Parties", num_parties)
+        self.kv("# Pro Se", num_pro_se)
+
+        if notes:
+            self.kv("Notes", notes)
+
+        # ----- EVENT COUNTS -----
+        self.section_title("Event Summary")
+
+        counts = {}
+        for ts, cat, subcat, detail, tag in events:
+            counts[cat] = counts.get(cat, 0) + 1
+
+        if not counts:
+            self.kv("Events", "No events recorded.")
+        else:
+            for cat, count in counts.items():
+                self.kv(cat.replace("_", " ").title(), count)
+
+        # ----- FULL EVENT LIST -----
+        self.section_title("Event Log")
+
+        if not events:
+            ttk.Label(self.inner, text="No events recorded.", background="#F7F3EB").pack(anchor="w", padx=20)
+        else:
+            for ts, cat, subcat, detail, tag in events:
+                line = f"{ts} — {cat}"
+                if subcat:
+                    line += f" | {subcat}"
+                if detail:
+                    line += f" | {detail}"
+                if tag:
+                    line += f" [{tag}]"
+
+                ttk.Label(
+                    self.inner,
+                    text=line,
+                    background="#F7F3EB",
+                    font=("Segoe UI", 12)
+                ).pack(anchor="w", padx=20, pady=2)
+
+    # ---------------- HELPERS ----------------
+
+    def section_title(self, text):
+        ttk.Label(
+            self.inner,
+            text=text,
+            font=("Georgia", 20, "bold"),
+            background="#F7F3EB"
+        ).pack(anchor="w", padx=10, pady=(15, 5))
+
+    def kv(self, key, value):
+        frame = ttk.Frame(self.inner)
+        frame.pack(anchor="w", fill="x", padx=20, pady=2)
+
+        ttk.Label(
+            frame,
+            text=f"{key}:",
+            font=("Segoe UI", 12, "bold"),
+            background="#F7F3EB"
+        ).pack(side="left")
+
+        ttk.Label(
+            frame,
+            text=str(value),
+            font=("Segoe UI", 12),
+            background="#F7F3EB"
+        ).pack(side="left", padx=10)
+
+    # ---------------- EXPORT TO PDF ----------------
+
+    def export_pdf(self):
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.pagesizes import LETTER
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        from tkinter import filedialog
+
+        # Ask user where to save
+        path = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            filetypes=[("PDF Files", "*.pdf")],
+            title="Save Hearing Summary as PDF"
+        )
+        if not path:
+            return
+
+        # Load data
+        meta = get_hearing_metadata(self.hearing_id)
+        events = get_events_for_hearing(self.hearing_id)
+
+        (
+            hid, created_at, date, case_number, case_type,
+            judge, hearing_type, num_parties, num_pro_se, notes
+        ) = meta
+
+        # Theme-aware colors
+        theme = self.master.master.settings.settings.get("theme_mode", "light")
+        if theme == "dark":
+            accent = "#C9A86A"
+            text_color = "#EAEAEA"
+        else:
+            accent = "#4A3F35"
+            text_color = "#000000"
+
+        # Register fonts
+        try:
+            pdfmetrics.registerFont(TTFont("Georgia", "georgia.ttf"))
+            header_font = "Georgia"
+        except:
+            header_font = "Helvetica-Bold"
+
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle(
+            "Title",
+            parent=styles["Heading1"],
+            fontName=header_font,
+            fontSize=22,
+            textColor=accent,
+            spaceAfter=20,
+        )
+
+        label_style = ParagraphStyle(
+            "Label",
+            parent=styles["Normal"],
+            fontName="Helvetica-Bold",
+            fontSize=12,
+            textColor=accent,
+            spaceAfter=4,
+        )
+
+        value_style = ParagraphStyle(
+            "Value",
+            parent=styles["Normal"],
+            fontName="Helvetica",
+            fontSize=12,
+            textColor=text_color,
+            leftIndent=20,
+            spaceAfter=6,
+        )
+
+        event_style = ParagraphStyle(
+            "Event",
+            parent=styles["Normal"],
+            fontName="Helvetica",
+            fontSize=11,
+            textColor=text_color,
+            leftIndent=20,
+            spaceAfter=4,
+        )
+
+        story = []
+
+        # Title
+        story.append(Paragraph("Hearing Summary", title_style))
+        story.append(Spacer(1, 12))
+
+        # Metadata
+        def add_kv(label, value):
+            story.append(Paragraph(label, label_style))
+            story.append(Paragraph(str(value), value_style))
+
+        add_kv("Date", date)
+        add_kv("Case Number", case_number or "—")
+        add_kv("Case Type", case_type or "—")
+        add_kv("Judge", judge or "—")
+        add_kv("Hearing Type", hearing_type or "—")
+        add_kv("Number of Parties", num_parties)
+        add_kv("Number of Pro Se", num_pro_se)
+
+        if notes:
+            add_kv("Notes", notes)
+
+        story.append(Spacer(1, 20))
+
+        # Event Summary
+        story.append(Paragraph("Event Summary", title_style))
+        counts = {}
+        for ts, cat, subcat, detail, tag in events:
+            counts[cat] = counts.get(cat, 0) + 1
+
+        if not counts:
+            story.append(Paragraph("No events recorded.", value_style))
+        else:
+            for cat, count in counts.items():
+                add_kv(cat.replace("_", " ").title(), count)
+
+        story.append(Spacer(1, 20))
+
+        # Event Log
+        story.append(Paragraph("Event Log", title_style))
+
+        if not events:
+            story.append(Paragraph("No events recorded.", value_style))
+        else:
+            for ts, cat, subcat, detail, tag in events:
+                line = f"<b>{ts}</b> — {cat}"
+                if subcat:
+                    line += f" | {subcat}"
+                if detail:
+                    line += f" | {detail}"
+                if tag:
+                    line += f" [{tag}]"
+                story.append(Paragraph(line, event_style))
+
+        # Build PDF
+        doc = SimpleDocTemplate(
+            path,
+            pagesize=LETTER,
+            leftMargin=72,
+            rightMargin=72,
+            topMargin=72,
+            bottomMargin=72,
+        )
+
+        doc.build(story)
+
+        messagebox.showinfo("Export Complete", f"PDF saved to:\n{path}")
+
 
 # ---------------------------------------------------------
 # DATA CENTER VIEW (Glow‑Up Version)
@@ -1426,7 +1788,7 @@ class DataCenterView(ttk.Frame):
 
         ttk.Button(btns, text="Apply Filters", style="HubButton.TButton", command=self.refresh_table).pack(fill="x", pady=3)
         ttk.Button(btns, text="Clear Filters", style="HubButton.TButton", command=self.clear_filters).pack(fill="x", pady=3)
-        ttk.Button(btns, text="Delete All Data", style="HubButton.TButton").pack(fill="x", pady=3)
+        ttk.Button(btns, text="Delete All Data", style="HubButton.TButton", command=self.delete_all_data).pack(fill="x", pady=3)
 
         # Stats
         self.lbl_total_hearings = ttk.Label(card, text="Total Hearings: 0", font=("Segoe UI", 14), background="#F7F3EB")
@@ -1492,6 +1854,26 @@ class DataCenterView(ttk.Frame):
         item = sel[0]
         hearing_id = self.tree.item(item, "values")[0]
         HearingDetailDialog(self, hearing_id)
+
+    def delete_all_data(self):
+        if not messagebox.askyesno(
+            "Delete All Data",
+            "This will permanently delete ALL hearings, events, docket entries, and analytics.\nContinue?"
+        ):
+            return
+
+        from db_layer import delete_all_hearings, delete_all_events, delete_all_docket_entries
+
+        try:
+            delete_all_events()
+            delete_all_hearings()
+            delete_all_docket_entries()
+            messagebox.showinfo("Data Deleted", "All data has been cleared.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not delete data:\n{e}")
+
+        self.refresh_table()
+
 
 # --------COURTROOM LOGGER VIEW (GLOW‑UP)---------------
 
@@ -2043,6 +2425,7 @@ class CourtroomLoggerView(ttk.Frame):
 
         ttk.Button(btn_frame, text="Start Docket Mode", command=self.start_docket_mode).pack(side="left", padx=5)
         ttk.Button(btn_frame, text="Finish Docket Batch", command=self.finish_docket_batch).pack(side="left", padx=5)
+        ttk.Button(btn_frame, text="Clear Docket Table", command=self.clear_docket_table).pack(side="left", padx=5)
 
         self.refresh_docket_list()
 
@@ -2156,6 +2539,8 @@ class CourtroomLoggerView(ttk.Frame):
         self.event_list.delete(0, tk.END)
         self.set_event_buttons_state("normal")
 
+        self.btn_end_hearing.config(state="normal")
+
         if self.docket_mode and self.selected_docket_id is not None:
             mark_docket_used(self.selected_docket_id)
             self.refresh_docket_list()
@@ -2166,13 +2551,16 @@ class CourtroomLoggerView(ttk.Frame):
                 messagebox.showinfo("No Active Hearing", "There is no active hearing to end.")
             return
 
+        # Confirm (unless forced or in docket mode)
         if not force and not self.docket_mode:
             if not messagebox.askyesno("End Hearing", "End the current hearing?"):
                 return
 
+        # --- Save notes ---
         notes = self.text_notes.get("1.0", tk.END).strip()
         update_hearing_notes(self.current_hearing_id, notes)
 
+        # --- Calculate duration ---
         duration_str = None
         if self.current_hearing_start:
             elapsed = datetime.datetime.now() - self.current_hearing_start
@@ -2182,18 +2570,24 @@ class CourtroomLoggerView(ttk.Frame):
             s = total_seconds % 60
             duration_str = f"{h:02d}:{m:02d}:{s:02d}"
 
+        # Stop timer
         self.timer_running = False
         self.current_hearing_start = None
 
+        # --- DOCKET MODE BRANCH ---
         if self.docket_mode:
             self.docket_hearing_ids.append(self.current_hearing_id)
 
+            # Reset UI
             self.current_hearing_id = None
             self.lbl_current_hearing.config(text="No active hearing")
             self.event_list.delete(0, tk.END)
             self.text_notes.delete("1.0", tk.END)
             self.set_event_buttons_state("disabled")
 
+            self.btn_end_hearing.config(state="disabled")
+
+            # Ask to continue
             if messagebox.askyesno("Docket", "Go to next case in docket?"):
                 self.load_next_docket_case()
             else:
@@ -2201,6 +2595,7 @@ class CourtroomLoggerView(ttk.Frame):
 
             return
 
+        # --- NORMAL MODE EXPORT ---
         meta = get_hearing_metadata(self.current_hearing_id)
         default_name = "hearing"
         default_reflection_title = "Hearing Reflection"
@@ -2221,6 +2616,7 @@ class CourtroomLoggerView(ttk.Frame):
             filetypes=[("Text files", "*.txt"), ("All Files", "*.*")]
         )
 
+        # If user cancels, skip export but still end hearing cleanly
         if filepath:
             base, _ = os.path.splitext(filepath)
             try:
@@ -2236,13 +2632,22 @@ class CourtroomLoggerView(ttk.Frame):
             except Exception as e:
                 messagebox.showerror("Export Error", f"Could not export files:\n{e}")
 
+        # --- Reflection ---
         self.open_hearing_reflection(self.current_hearing_id, default_reflection_title)
 
+        # --- FINAL CLEANUP ---
         self.current_hearing_id = None
         self.lbl_current_hearing.config(text="No active hearing")
         self.event_list.delete(0, tk.END)
         self.text_notes.delete("1.0", tk.END)
         self.set_event_buttons_state("disabled")
+
+        if duration_str:
+            conn = sqlite3.connect(DB_NAME)
+            cur = conn.cursor()
+            cur.execute("UPDATE hearings SET duration = ? WHERE id = ?", (duration_str, self.current_hearing_id))
+            conn.commit()
+            conn.close()
 
     # ---------------- REFLECTION ----------------
 
@@ -2312,6 +2717,23 @@ class CourtroomLoggerView(ttk.Frame):
         self.docket_hearing_ids = []
         self.update_docket_banner()
         self.refresh_docket_list()
+
+    def clear_docket_table(self):
+        if not messagebox.askyesno(
+            "Clear Docket",
+            "This will permanently delete ALL docket entries.\nContinue?"
+        ):
+            return
+
+        from db_layer import delete_all_docket_entries
+
+        try:
+            delete_all_docket_entries()
+            self.refresh_docket_list()
+            messagebox.showinfo("Docket Cleared", "All docket entries have been removed.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not clear docket:\n{e}")
+
 
     def open_docket_reflection(self, hearing_ids, base_label):
         if not hearing_ids:
@@ -2456,54 +2878,87 @@ class CourtroomLoggerView(ttk.Frame):
     def open_judge_profiles(self):
         JudgeProfileWindow(self, clear_callback=self.clear_judge_data)
 
+    def log_event_category(self, category_key):
+        if self.current_hearing_id is None:
+            messagebox.showwarning("No Active Hearing", "Start a hearing before logging events.")
+            return
+
+        cfg = EVENT_DEFINITIONS.get(category_key)
+        if not cfg:
+            return
+
+        # Open dialog for subcategory + detail
+        dlg = EventDialog(self, category_key)
+        self.wait_window(dlg)
+
+        if dlg.result is None:
+            return
+
+        sub_code, detail, tag = dlg.result
+
+        # Log event
+        log_event(self.current_hearing_id, category_key, sub_code, detail, tag)
+
+        # Store last event for repeat
+        self.last_event = (category_key, sub_code, detail, tag)
+        self.btn_repeat_last.config(state="normal")
+
+        # Refresh UI
+        self.refresh_event_list()
+
+
 # ---------------- APP CONTROLLER ----------------
+
+import tkinter as tk
+from tkinter import ttk, messagebox
+import datetime
+import os
+
+from settings_manager import SettingsManager
+from theme_manager import apply_theme
+from db_layer import init_db, update_hearing_notes
+from resource_hub_view import ResourceHubView
+from settings_view import SettingsView
+
+# If you use UI_SCALE or FONTS, import them here
+from config import UI_SCALE, FONTS
+
 
 class AppController:
     def __init__(self, root):
         self.root = root
+        self.root.withdraw()
 
-  # ---------------- GLOBAL FONT OVERRIDE ----------------
+        # ---------------- GLOBAL FONT OVERRIDE ----------------
         import tkinter.font as tkfont
 
         default_font = tkfont.nametofont("TkDefaultFont")
-        default_font.configure(
-            family="Segoe UI",
-            size=int(12 * UI_SCALE)
-        )
+        default_font.configure(family="Segoe UI", size=int(12 * UI_SCALE))
 
         text_font = tkfont.nametofont("TkTextFont")
-        text_font.configure(
-            family="Segoe UI",
-            size=int(12 * UI_SCALE)
-        )
+        text_font.configure(family="Segoe UI", size=int(12 * UI_SCALE))
 
         fixed_font = tkfont.nametofont("TkFixedFont")
-        fixed_font.configure(
-            family="Consolas",
-            size=int(12 * UI_SCALE)
-        )
+        fixed_font.configure(family="Consolas", size=int(12 * UI_SCALE))
 
         menu_font = tkfont.nametofont("TkMenuFont")
-        menu_font.configure(
-            family="Segoe UI",
-            size=int(12 * UI_SCALE)
-        )
+        menu_font.configure(family="Segoe UI", size=int(12 * UI_SCALE))
 
         heading_font = tkfont.nametofont("TkHeadingFont")
-        heading_font.configure(
-            family="Segoe UI",
-            size=int(14 * UI_SCALE),
-            weight="bold"
-        )
+        heading_font.configure(family="Segoe UI", size=int(14 * UI_SCALE), weight="bold")
 
-        # Shared settings manager
+        # ---------------- SETTINGS ----------------
         self.settings = SettingsManager()
         self.settings.load_settings()
 
-        # Apply window settings
+        # Apply window settings (title, icon, DPI, fullscreen/maximize)
         self.apply_window_settings()
 
-        # Initialize DBs
+        # Apply THEME (light or dark)
+        theme_mode = self.settings.settings.get("theme_mode", "light")
+        apply_theme(self.root, theme_mode)
+
+        # ---------------- DATABASES ----------------
         init_db()
         init_journal_db()
 
@@ -2511,40 +2966,42 @@ class AppController:
         menu_bar = tk.Menu(self.root)
         self.root.config(menu=menu_bar)
 
-        # File menu
         file_menu = tk.Menu(menu_bar, tearoff=0)
         file_menu.add_command(label="Exit", command=self.root.quit)
         menu_bar.add_cascade(label="File", menu=file_menu)
 
-        # Settings menu
         settings_menu = tk.Menu(menu_bar, tearoff=0)
         settings_menu.add_command(label="Preferences", command=self.show_settings)
         menu_bar.add_cascade(label="Settings", menu=settings_menu)
 
-        # Help menu
         help_menu = tk.Menu(menu_bar, tearoff=0)
-        help_menu.add_command(
-            label="About MiniCourt",
-            command=lambda: open_about_window(self.root)
-        )
+        help_menu.add_command(label="About MiniCourt", command=lambda: messagebox.showinfo("About", "MiniCourt 2.0"))
         menu_bar.add_cascade(label="Help", menu=help_menu)
 
+        # Analytics Menu
+        analytics_menu = tk.Menu(menu_bar, tearoff=0)
+        analytics_menu.add_command(
+            label="Analytics Dashboard",
+            command=self.show_analytics_dashboard
+        )
+        menu_bar.add_cascade(label="Analytics", menu=analytics_menu)
 
-        # Prepare container for views
+
+        # ---------------- VIEW CONTAINER ----------------
         self.current_view = None
 
-        # Start with splash screen if enabled
+        self.build_status_bar()
+        self.bind_global_shortcuts()
+
+        # ---------------- STARTUP ----------------
         if self.settings.settings.get("show_splash_screen", True):
             self.show_splash_screen()
         else:
             self.show_startup_view()
 
+        # Button style
         style = ttk.Style()
-        style.configure(
-            "TButton",
-             font=FONTS["normal"],
-             padding=(12, 8)   # (horizontal, vertical)
-        )
+        style.configure("TButton", font=FONTS["normal"], padding=(12, 8))
 
     # ---------------- WINDOW SETTINGS ----------------
 
@@ -2552,8 +3009,7 @@ class AppController:
         s = self.settings.settings
 
         # Window title
-        title = s.get("window_title", "MiniCourt")
-        self.root.title(title)
+        self.root.title(s.get("window_title", "MiniCourt"))
 
         # Icon
         icon_path = s.get("icon_path")
@@ -2579,18 +3035,42 @@ class AppController:
             except Exception:
                 pass
 
-        # Apply theme
-        setup_vintage_theme(self.root)
+        # ❌ Removed setup_vintage_theme — ThemeManager now controls all theming
 
     # ---------------- SPLASH SCREEN ----------------
 
+    from splash_screen import AnimatedSplashScreen
+
     def show_splash_screen(self):
-        SplashScreen(
+        AnimatedSplashScreen(
             self.root,
             settings=self.settings,
             on_done=self.show_startup_view,
-            delay_ms=1500,
+            delay_ms=1800,
         )
+
+    # ---------------- STATUS BAR ----------------
+
+    def build_status_bar(self):
+        self.status_frame = ttk.Frame(self.root)
+        self.status_frame.pack(side="bottom", fill="x")
+
+        self.status_label = ttk.Label(self.status_frame, text="Ready", anchor="w", font=("Segoe UI", 20))
+        self.status_label.pack(side="left", padx=10)
+
+        self.time_label = ttk.Label(self.status_frame, text="", anchor="e", font=("Segoe UI", 20))
+        self.time_label.pack(side="right", padx=10)
+
+        self.update_status_bar()
+
+    def update_status_bar(self):
+        now = datetime.datetime.now().strftime("%I:%M:%S %p")
+        self.time_label.config(text=now)
+
+        active = getattr(self.current_view, "current_hearing_id", None)
+        self.status_label.config(text=f"Active Hearing: {active}" if active else "Ready")
+
+        self.root.after(1000, self.update_status_bar)
 
     # ---------------- VIEW SWITCHING ----------------
 
@@ -2600,8 +3080,8 @@ class AppController:
             self.current_view = None
 
     def show_startup_view(self):
+        self.root.deiconify() 
         startup = self.settings.settings.get("startup_view", "login").lower()
-
         if startup == "menu":
             self.show_main_menu()
         else:
@@ -2656,18 +3136,58 @@ class AppController:
             self.root,
             settings_manager=self.settings,
             on_back_to_menu=self.show_main_menu,
+            on_theme_change=self.set_theme,   # ⭐ NEW: callback for instant theme switching
         )
         self.current_view.pack(fill="both", expand=True)
+
+    def show_analytics_dashboard(self):
+        self.clear_view()
+        self.current_view = AnalyticsDashboardView(
+            self.root,
+            on_back_to_menu=self.show_main_menu,
+            settings=self.settings,
+        )
+        self.current_view.pack(fill="both", expand=True)
+
+
+    # ---------------- SHORTCUTS ----------------
+
+    def bind_global_shortcuts(self):
+        self.root.bind_all("<Control-n>", lambda e: self.start_new_hearing())
+        self.root.bind_all("<Control-s>", lambda e: self.save_notes_global())
+        self.root.bind_all("<Control-d>", lambda e: self.add_docket_entry_global())
+
+    def start_new_hearing(self):
+        if hasattr(self.current_view, "start_hearing"):
+            self.current_view.start_hearing()
+
+    def save_notes_global(self):
+        if hasattr(self.current_view, "text_notes"):
+            notes = self.current_view.text_notes.get("1.0", "end").strip()
+            if hasattr(self.current_view, "current_hearing_id") and self.current_view.current_hearing_id:
+                update_hearing_notes(self.current_view.current_hearing_id, notes)
+                messagebox.showinfo("Saved", "Notes saved.")
+
+    def add_docket_entry_global(self):
+        if hasattr(self.current_view, "add_entry"):
+            self.current_view.add_entry()
+
+    # ---------------- THEME SWITCHING ----------------
+
+    def set_theme(self, mode: str):
+        """Apply theme and save to settings."""
+        apply_theme(self.root, mode)
+        self.settings.set("theme_mode", mode)
+        self.settings.save_settings()
 
 
 # ---------------- MAIN ENTRY POINT ----------------
 
 def main():
     root = tk.Tk()
-    root.withdraw() # hide main window until splash is done
     app = AppController(root)
     root.mainloop()
 
 
 if __name__ == "__main__":
-    main()    
+    main()
